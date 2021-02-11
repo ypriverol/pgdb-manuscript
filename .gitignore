@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#datasets info from another git repo
+multiomics-configs/
+
+#eclipse project files
+.project
+.pydevproject
