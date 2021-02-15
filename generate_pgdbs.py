@@ -200,9 +200,12 @@ if __name__ == '__main__':
                 cmd = '''nextflow main.nf -profile docker {cosmic} {cbio} --add_reference false --final_database_protein {sample_id}.fa --outdir {outdir} -resume
                 '''.format(cosmic= cosmic, cbio = cbio, sample_id  = sample_id, outdir = args.outdir)
                 cmds.write(cmd + '\n')
-    cmd = '''nextflow main.nf -profile docker --final_database_protein {out}.fa --outdir {outdir} -resume'''.format(
-        outfile='refprot_ncrna_pesudogenes.fa')
-    cmds.write(cmd + '\n')
+    
+        cmds.write('Final database: refprot + ncrna' + '\n')
+        cmd = '''nextflow main.nf -profile docker --ensembl_name homo_sapiens --ncrna true --pseudogenes true --altorfs true --final_database_protein {out}.fa --outdir {outdir} -resume'''.format(
+            out='refprot_altorfs_ncrna_pesudogenes.fa', outdir = args.outdir)
+        cmds.write(cmd + '\n')
+        
     print('No cell lines are found in COSMICCLP for these cell line datasets:\n{}'.format(
         '\n'.join([x+': '+','.join(set(y)) for x,y in cell_lines_not_in_cosmic.items()])))
     print('No cell lines are found in cBioportal for these cell line datasets:\n{}'.format(
