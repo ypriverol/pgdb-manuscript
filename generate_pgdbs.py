@@ -7,7 +7,6 @@ import os
 import sys
 import glob
 import argparse
-import json
 
 def parse_commandline_args():
     """
@@ -193,7 +192,7 @@ if __name__ == '__main__':
             cbio = ''
             try:
                 cbio_cell_name = samples_celllines_cosmic_cbio[sample_id]['cbio']
-                cbio = '--cbioportal true --cbioportal_tissue_type {}'.format(cbio_cell_name)
+                cbio = '--cbioportal true --cbioportal_filter_column SAMPLE_ID --cbioportal_study_id cellline_nci60 --cbioportal_accepted_values {}'.format(cbio_cell_name)
             except KeyError:
                 pass
             
@@ -201,7 +200,9 @@ if __name__ == '__main__':
                 cmd = '''nextflow main.nf -profile docker {cosmic} {cbio} --add_reference false --final_database_protein {sample_id}.fa --outdir {outdir} -resume
                 '''.format(cosmic= cosmic, cbio = cbio, sample_id  = sample_id, outdir = args.outdir)
                 cmds.write(cmd + '\n')
-    
+    cmd = '''nextflow main.nf -profile docker --final_database_protein {out}.fa --outdir {outdir} -resume'''.format(
+        outfile='refprot_ncrna_pesudogenes.fa')
+    cmds.write(cmd + '\n')
     print('No cell lines are found in COSMICCLP for these cell line datasets:\n{}'.format(
         '\n'.join([x+': '+','.join(set(y)) for x,y in cell_lines_not_in_cosmic.items()])))
     print('No cell lines are found in cBioportal for these cell line datasets:\n{}'.format(
