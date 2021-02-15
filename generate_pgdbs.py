@@ -201,7 +201,7 @@ if __name__ == '__main__':
                 '''.format(cosmic= cosmic, cbio = cbio, sample_id  = sample_id, outdir = args.outdir)
                 cmds.write(cmd + '\n')
     
-        cmds.write('Final database: refprot + ncrna' + '\n')
+        cmds.write('#Final database: refprot + ncrna' + '\n')
         cmd = '''nextflow main.nf -profile docker --ensembl_name homo_sapiens --ncrna true --pseudogenes true --altorfs true --final_database_protein {out}.fa --outdir {outdir} -resume'''.format(
             out='refprot_altorfs_ncrna_pesudogenes.fa', outdir = args.outdir)
         cmds.write(cmd + '\n')

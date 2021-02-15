@@ -269,5 +269,5 @@ nextflow main.nf -profile docker --cosmic_celllines true --cosmic_user_name $cos
                 
 nextflow main.nf -profile docker --cosmic_celllines true --cosmic_user_name $cosmic_user_name --cosmic_password $cosmic_password --cosmic_cellline_name NCI-H460 --cbioportal true --cbioportal_filter_column SAMPLE_ID --cbioportal_study_id cellline_nci60 --cbioportal_accepted_values NCI_H460 --add_reference false --final_database_protein PXD005946-Sample-58.fa --outdir sample_specific_dbs -resume
                 
-Final database: refprot + ncrna
+#Final database: refprot + ncrna
 nextflow main.nf -profile docker --ensembl_name homo_sapiens --ncrna true --pseudogenes true --altorfs true --final_database_protein refprot_altorfs_ncrna_pesudogenes.fa.fa --outdir sample_specific_dbs -resume
