@@ -15,7 +15,6 @@ def parse_commandline_args():
     parser = argparse.ArgumentParser(description='Get colums from the second file for the first file')
     parser.add_argument('-c', '--cosmic_cell_names', help= "File containing all COSMIC cell line names, single column", required=True)
     parser.add_argument('-p', '--path_to_datasets', help= "Path to directory containing tsv files, each for a sample dataset", required=True)
-    parser.add_argument('-o', '--outdir', help= "Output file directory", default = 'sample_specific_dbs')
     parser.add_argument('-cl', '--clinical_samples_file', help= "File containing all cBiportal clinical samples metadata", required=True)
     
     return parser.parse_args(sys.argv[1:])
@@ -27,6 +26,8 @@ def update_cell_name_cosmic(cell_name, cosmic_cell_names):
         return cell_name.upper()
     elif cell_name.lower() in cosmic_cell_names:
         return cell_name.lower()
+    elif cell_name.lower() in [x.lower() for x in cosmic_cell_names]:
+        return cosmic_cell_names[list([x.lower() for x in cosmic_cell_names]).index(cell_name.lower())]
     elif cell_name.replace(' cell', '') in cosmic_cell_names:
         return cell_name.replace(' cell', '')
     elif 'NCI-'+cell_name in cosmic_cell_names:
@@ -41,6 +42,10 @@ def update_cell_name_cosmic(cell_name, cosmic_cell_names):
         return cell_name.replace(' ', '_')
     elif cell_name.replace('OVCAR', 'OVCAR-').replace('HOP', 'HOP-') in cosmic_cell_names:
         return cell_name.replace('OVCAR', 'OVCAR-').replace('HOP', 'HOP-')
+    elif cell_name == 'LnCap' or cell_name == 'LanCap' and 'LNCaP-Clone-FGC' in cosmic_cell_names:
+        return 'LNCaP-Clone-FGC'
+    elif cell_name == 'HTC116' and 'HCT-116' in cosmic_cell_names:
+        return 'HTC116'
     else:
         return None
     
@@ -50,12 +55,16 @@ def get_sample_cellline_matches_cosmic(datasets, cosmic_cell_names, cosmic_cell_
     cell_lines_not_in_cosmic = {}
     for dataset in datasets:
         with open(dataset, 'r') as ds:
-            header = ds.readline().strip().split('\t')
-            cell_line_index = header.index('characteristics[cell line]')
-            id_index= header.index('source name')
+            header = ds.readline().strip().lower().split('\t')
+            try:
+                cell_line_index = header.index('characteristics[cell line]')
+                id_index= header.index('source name')
+            except ValueError:
+                print("Error: 'characteristics[cell line]' column is not found in ", dataset)
+                sys.exit(0)
             for l in ds.readlines():
                 sl = l.strip().split('\t')
-                sample_id = sl[id_index]
+                sample_id = dataset.split('/')[-1].split('.')[0]#sl[id_index]
                 cell_name = sl[cell_line_index]
                 samples_celllines[sample_id] = {'original': cell_name}
                 try:
@@ -67,6 +76,7 @@ def get_sample_cellline_matches_cosmic(datasets, cosmic_cell_names, cosmic_cell_
                         cell_lines_not_in_cosmic[sl[cell_line_index]].append(sl[id_index])
                     except KeyError:
                         cell_lines_not_in_cosmic[sl[cell_line_index]] = [sl[id_index]]
+                    #print('not found in cosmic: ', cell_name, sample_id, sl)
                     continue
                 
                 samples_celllines[sample_id]['cosmic'] = cell_name
@@ -87,10 +97,17 @@ def get_sample_info_from_cbioportal(clinical_samples_file):
             sl = line.strip().split('\t')
             try:
                 sample_id_index = sl.index('SAMPLE_ID')
-                cancer_type_index = sl.index('CANCER_TYPE')
+                if 'CANCER_TYPE' in sl:
+                    cancer_type_index = sl.index('CANCER_TYPE')
+                else:
+                    cancer_type_index = sample_id_index
             except ValueError:
-                sample_ids_info[sl[sample_id_index]] = sl[cancer_type_index]
-    
+                try:
+                    sample_ids_info[sl[sample_id_index]] = sl[cancer_type_index]
+                except IndexError:
+                    #some lines have no cancer type column
+                    sample_ids_info[sl[sample_id_index]] = ''
+            
     with open(output_file, 'w') as output:
         for sample, info in sample_ids_info.items():
             output.write('{}\t{}\n'.format(sample, info))
@@ -123,6 +140,23 @@ def update_cell_name_cbio(cell_name, cbio_cell_names):
         for x in cbio_cell_names:
             if cell_name == 'NCI-'+x:
                 return 'NCI-'+x
+    if cell_name.upper()+'_CERVIX' in cbio_cell_names:
+        return cell_name.upper()+'_CERVIX'
+    elif cell_name.upper() in [x.split('_')[0] for x in cbio_cell_names]:
+        return cbio_cell_names[list([x.split('_')[0] for x in cbio_cell_names]).index(cell_name.upper())]
+    
+    elif cell_name.upper().replace('-','') in [x.split('_')[0] for x in cbio_cell_names]:
+        return cbio_cell_names[list([x.split('_')[0] for x in cbio_cell_names]).index(cell_name.upper().replace('-',''))]
+    
+    elif cell_name == 'OVCAR-3' and 'NIHOVCAR3_OVARY' in cbio_cell_names:
+        return 'NIHOVCAR3_OVARY'
+    
+    elif cell_name == '786-0' and '786O_KIDNEY' in cbio_cell_names:
+        return '786O_KIDNEY'
+    elif cell_name == 'U251' and 'U251MG_CENTRAL_NERVOUS_SYSTEM' in cbio_cell_names:
+        return 'U251MG_CENTRAL_NERVOUS_SYSTEM'
+    elif cell_name == 'HTC116' and 'HCT116_LARGE_INTESTINE' in cbio_cell_names:
+        return 'HCT116_LARGE_INTESTINE'
     
     else:
         return None
@@ -137,20 +171,20 @@ def get_sample_cellline_matches_cbio(sample_ids_cbioportal, samples_celllines_co
             cosmic_cell_name = info['cosmic']
         except KeyError:
             cosmic_cell_name = None
-            continue
+            #continue
         if cosmic_cell_name:
-            cell_name = update_cell_name_cbio(cosmic_cell_name, sample_ids_cbioportal.keys())
+            cell_name = update_cell_name_cbio(cosmic_cell_name, list(sample_ids_cbioportal.keys()))
         if not cell_name:
-            cell_name = update_cell_name_cbio(original_cell_name, sample_ids_cbioportal.keys())
+            cell_name = update_cell_name_cbio(original_cell_name, list(sample_ids_cbioportal.keys()))
         
         if cell_name:
             samples_celllines_cosmic[sample]['cbio'] = cell_name
         else:
             try:
-                not_found_in_cbio[cosmic_cell_name].append(sample)
+                not_found_in_cbio[original_cell_name].append(sample)
             except KeyError:
-                not_found_in_cbio[cosmic_cell_name] = [sample]
-    
+                not_found_in_cbio[original_cell_name] = [sample]
+            #print('not found in cbio:', cell_name, sample, info)
     return samples_celllines_cosmic, not_found_in_cbio
     
     
@@ -159,7 +193,7 @@ if __name__ == '__main__':
     args = parse_commandline_args()
     
     datasets = glob.glob(args.path_to_datasets + '/*.tsv')
-    cosmic_cell_names = set([x.strip() for x in open(args.cosmic_cell_names, 'r').readlines()])
+    cosmic_cell_names = list(set([x.strip() for x in open(args.cosmic_cell_names, 'r').readlines()]))
     
     cell_names_mapped_to_cosmic = {'MCF7AdrR': 'MCF7',  'MCF7/AdrR': 'MCF7', 'U-251 MG': 'U251', 
                                 'SKOV3': 'SK-OV-3', 'Caki1': 'CAKI-1', 'K562': 'K-562',
@@ -178,8 +212,11 @@ if __name__ == '__main__':
                             sample_ids_cbioportal, samples_celllines_cosmic)
     
     with open('generate_db_commands.sh', 'w') as cmds:
+        cmds.write('#set global variables' + '\n')
         cmds.write('cosmic_user_name=""' + '\n')
-        cmds.write('cosmic_password=""' + '\n\n')
+        cmds.write('cosmic_password=""' + '\n')
+        cmds.write('cbio_study_id="ccle_broad_2019"' + '\n')
+        cmds.write('output_dir="sample_specific_dbs"' + '\n\n')
         
         for sample_id in samples_celllines_cosmic_cbio.keys():
             cosmic = ''
@@ -192,24 +229,24 @@ if __name__ == '__main__':
             cbio = ''
             try:
                 cbio_cell_name = samples_celllines_cosmic_cbio[sample_id]['cbio']
-                cbio = '--cbioportal true --cbioportal_filter_column SAMPLE_ID --cbioportal_study_id cellline_nci60 --cbioportal_accepted_values {}'.format(cbio_cell_name)
+                cbio = '--cbioportal true --cbioportal_filter_column SAMPLE_ID --cbioportal_study_id $cbio_study_id --cbioportal_accepted_values {}'.format(cbio_cell_name)
             except KeyError:
                 pass
             
             if cosmic or cbio:
-                cmd = '''nextflow main.nf -profile docker {cosmic} {cbio} --add_reference false --final_database_protein {sample_id}.fa --outdir {outdir} -resume
-                '''.format(cosmic= cosmic, cbio = cbio, sample_id  = sample_id, outdir = args.outdir)
+                cmd = '''nextflow main.nf -profile docker {cosmic} {cbio} --add_reference false --final_database_protein {sample_id}.fa --outdir $output_dir -resume
+                '''.format(cosmic= cosmic, cbio = cbio, sample_id  = sample_id)
                 cmds.write(cmd + '\n')
-    
+        
         cmds.write('#Final database: refprot + ncrna' + '\n')
-        cmd = '''nextflow main.nf -profile docker --ensembl_name homo_sapiens --ncrna true --pseudogenes true --altorfs true --final_database_protein {out}.fa --outdir {outdir} -resume'''.format(
-            out='refprot_altorfs_ncrna_pesudogenes.fa', outdir = args.outdir)
+        cmd = '''nextflow main.nf -profile docker --ensembl_name homo_sapiens --ncrna true --pseudogenes true --altorfs true --final_database_protein {out}.fa --outdir $output_dir -resume'''.format(
+            out='refprot_altorfs_ncrna_pesudogenes.fa')
         cmds.write(cmd + '\n')
         
     print('No cell lines are found in COSMICCLP for these cell line datasets:\n{}'.format(
         '\n'.join([x+': '+','.join(set(y)) for x,y in cell_lines_not_in_cosmic.items()])))
     print('No cell lines are found in cBioportal for these cell line datasets:\n{}'.format(
-        '\n'.join([x+': '+','.join(set(y)) for x,y in not_found_in_cbio.items()])))
+        '\n'.join([x for x,y in not_found_in_cbio.items()])))
     print('Please run generate_db_commands.sh to generate the databases using pgdb')
     
     
