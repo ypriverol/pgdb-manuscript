@@ -3,7 +3,6 @@ Created on 10 Feb 2021
 
 @author: husen
 '''
-import os
 import sys
 import glob
 import argparse
@@ -12,10 +11,13 @@ def parse_commandline_args():
     """
     read command line arguments or set the default values
     """
-    parser = argparse.ArgumentParser(description='Get colums from the second file for the first file')
-    parser.add_argument('-c', '--cosmic_cell_names', help= "File containing all COSMIC cell line names, single column", required=True)
-    parser.add_argument('-p', '--path_to_datasets', help= "Path to directory containing tsv files, each for a sample dataset", required=True)
-    parser.add_argument('-cl', '--clinical_samples_file', help= "File containing all cBiportal clinical samples metadata", required=True)
+    parser = argparse.ArgumentParser(description='Generate pgdb commands for sdrf datasets')
+    parser.add_argument('-c', '--cosmic_cell_names', default = 'cosmic_cellline_names.txt', 
+                        help= "File containing all COSMIC cell line names, single column")
+    parser.add_argument('-p', '--path_to_datasets', default = 'multiomics-configs/datasets/proteogenomics-samples/sample-specific/', 
+                        help= "Path to directory containing tsv files, each for a sample dataset")
+    parser.add_argument('-cl', '--clinical_samples_file', default = 'ccle_broad_2019_data_clinical_sample.txt', 
+                        help= "File containing all cBiportal clinical samples metadata")
     
     return parser.parse_args(sys.argv[1:])
     
@@ -218,7 +220,7 @@ if __name__ == '__main__':
         cmds.write('cbio_study_id="ccle_broad_2019"' + '\n')
         cmds.write('output_dir="sample_specific_dbs"' + '\n\n')
         
-        for sample_id in samples_celllines_cosmic_cbio.keys():
+        for sample_id in sorted(samples_celllines_cosmic_cbio.keys()):
             cosmic = ''
             try:
                 cosmic_cell_name = samples_celllines_cosmic_cbio[sample_id]['cosmic']
