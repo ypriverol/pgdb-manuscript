@@ -7,15 +7,16 @@ Created on 17 Feb 2021
 import sys
 import glob
 import argparse
+import xlsxwriter
 
 def parse_commandline_args():
     """
     read command line arguments or set the default values
     """
     parser = argparse.ArgumentParser(description='Combine sdrf files into one tsv file')
-    parser.add_argument('-p', '--path_to_datasets', deafuilt = 'multiomics-configs/datasets/proteogenomics-samples/sample-specific', 
+    parser.add_argument('-p', '--path_to_datasets', default = 'multiomics-configs/datasets/proteogenomics-samples/sample-specific', 
                         help= "Path to directory containing tsv files, each for a sample dataset")
-    parser.add_argument('-o', '--output_file', default = 'combined_sdrfs.tsv', help= "output file name")
+    parser.add_argument('-o', '--output_file', default = 'combined_sdrfs', help= "output file name")
     
     return parser.parse_args(sys.argv[1:])
 
@@ -25,14 +26,20 @@ def read_datasets(datasets, output):
     
     for dataset in datasets:
         with open(dataset, 'r') as ds:
-            dataset_name = dataset.split('/')[-1]
             header = ds.readline().strip().lower().split('\t')
             if  len(header)>2:
                 for i, col in enumerate(header):
                     column_indices[col] = 1
-    
-    with open(output, 'w') as out:
+    workbook = xlsxwriter.Workbook(output+'.xlsx')
+    worksheet = workbook.add_worksheet()
+    row = 0
+    with open(output+'.tsv', 'w') as out:
+        for i, col in enumerate(column_indices.keys()):
+            worksheet.write(row, i, col) 
+        row+=1
+
         out.write('\t'.join(column_indices.keys()) + '\n')
+        
         for dataset in datasets:
             with open(dataset, 'r') as ds:
                 header = ds.readline().strip().lower().split('\t')
@@ -51,7 +58,10 @@ def read_datasets(datasets, output):
                         else:
                             out_sl.append('NA')
                     out.write('\t'.join(out_sl) + '\n')
-              
+                    for i, col in enumerate(out_sl):
+                        worksheet.write(row, i, col) 
+                    row+=1
+    workbook.close() 
     
 if __name__ == '__main__':
     args = parse_commandline_args()
