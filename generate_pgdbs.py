@@ -14,7 +14,7 @@ def parse_commandline_args():
     parser = argparse.ArgumentParser(description='Generate pgdb commands for sdrf datasets')
     parser.add_argument('-c', '--cosmic_cell_names', default = 'cosmic_cellline_names.txt', 
                         help= "File containing all COSMIC cell line names, single column")
-    parser.add_argument('-p', '--path_to_datasets', default = 'multiomics-configs/datasets/proteogenomics-samples/sample-specific/', 
+    parser.add_argument('-p', '--path_to_datasets', default = 'multiomics-configs/datasets/cancer-celllines-samples/sample-specific/', 
                         help= "Path to directory containing tsv files, each for a sample dataset")
     parser.add_argument('-cl', '--clinical_samples_file', default = 'ccle_broad_2019_data_clinical_sample.txt', 
                         help= "File containing all cBiportal clinical samples metadata")

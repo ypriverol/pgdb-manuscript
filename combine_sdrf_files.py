@@ -14,7 +14,7 @@ def parse_commandline_args():
     read command line arguments or set the default values
     """
     parser = argparse.ArgumentParser(description='Combine sdrf files into one tsv file')
-    parser.add_argument('-p', '--path_to_datasets', default = 'multiomics-configs/datasets/proteogenomics-samples/sample-specific', 
+    parser.add_argument('-p', '--path_to_datasets', default = 'multiomics-configs/datasets/cancer-celllines-samples/sample-specific/', 
                         help= "Path to directory containing tsv files, each for a sample dataset")
     parser.add_argument('-o', '--output_file', default = 'combined_sdrfs', help= "output file name")
     
