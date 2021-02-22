@@ -4,6 +4,7 @@ import pandas as pd
 import glob
 from typing import Any, Dict, List, Set
 import pyopenms as oms
+import matplotlib as plt
 
 
 def ms_run_from_path(path: str, pattern: str):
@@ -55,7 +56,7 @@ def getIDQuality( idxml_file : str ):
 
 def create_df_metrics(props: dict, ms_run: str, step: str, sample: str):
   props['step'] = step
-  props['ms-run'] = ms_run
+  props['run'] = ms_run
   props['sample'] = sample
   return pd.DataFrame().append(props, ignore_index=True)
 
@@ -116,7 +117,8 @@ for sample in ms_runs:
     frames.append(create_df_metrics(getIDQuality(msgf_path), sample, 'msgf', project))
 
 merged_pd = pd.concat(frames)
-merged_pd.groupby('run').Sample.value_counts().unstack(0).plot.barh()
-
-
-
+merged_pd.plot.bar(stacked=True)
+plt.pyplot.show()
+print(merged_pd)
+merged_pd.groupby('run').psms.value_counts().unstack(0).plot.barh()
+print(merged_pd)
