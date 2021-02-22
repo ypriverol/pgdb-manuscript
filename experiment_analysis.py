@@ -46,16 +46,16 @@ def getIDQuality( idxml_file : str ):
     for p in proid.getHits():
       proteins.add(p.getAccession())
 
-  report['protein evidences'] = protein_evidence_count
-  report['identified proteins'] = len(proteins)
-  report['number of PSM'] = psm_count
-  report['peptide spectra'] = spectrum_count
-  report['unique peptide sequences'] = len(peptides)
+  report['p-evidences'] = protein_evidence_count
+  report['proteins'] = len(proteins)
+  report['psms'] = psm_count
+  report['pep-evidences'] = spectrum_count
+  report['unique-peptides'] = len(peptides)
   return report
 
 def create_df_metrics(props: dict, ms_run: str, step: str, sample: str):
-  props['process step'] = step
-  props['ms_run'] = ms_run
+  props['step'] = step
+  props['ms-run'] = ms_run
   props['sample'] = sample
   return pd.DataFrame().append(props, ignore_index=True)
 
@@ -115,9 +115,8 @@ for sample in ms_runs:
   if os.path.exists(msgf_path):
     frames.append(create_df_metrics(getIDQuality(msgf_path), sample, 'msgf', project))
 
-result = pd.concat(frames)
-result.to_csv('results.tsv', sep='\t')
-
+merged_pd = pd.concat(frames)
+merged_pd.groupby('run').Sample.value_counts().unstack(0).plot.barh()
 
 
 
