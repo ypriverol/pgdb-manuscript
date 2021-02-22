@@ -1,11 +1,24 @@
+import getopt
 import os
+import sys
 
+import click
 import pandas as pd
 import glob
 from typing import Any, Dict, List, Set
 import pyopenms as oms
-import matplotlib as plt
+from pandas import DataFrame
+import seaborn as sns
 
+
+def print_help():
+  """
+  Print the help of the tool
+  :return:
+  """
+  ctx = click.get_current_context()
+  click.echo(ctx.get_help())
+  ctx.exit()
 
 def ms_run_from_path(path: str, pattern: str):
   """
@@ -15,7 +28,25 @@ def ms_run_from_path(path: str, pattern: str):
   tail = tail.replace(pattern, "")
   return tail
 
+def generate_plots(merged_pd: DataFrame, project: str):
+  plot = sns.barplot(x='run', y='psms', hue='step', data=merged_pd)
+  plot.set(xticklabels=[])
+  plot.figure.savefig("{}-{}.png".format(project, 'psms'))
+  sns.barplot(x='run', y='pep-evidences', hue='step', data=merged_pd)
+  plot.set(xticklabels=[])
+  plot.figure.savefig("{}-{}.png".format(project, 'pep-evidences'))
+  sns.barplot(x='run', y='unique-peptides', hue='step', data=merged_pd)
+  plot.set(xticklabels=[])
+  plot.figure.savefig("{}-{}.png".format(project, 'unique-peptides'))
+  sns.barplot(x='run', y='proteins', hue='step', data=merged_pd)
+  plot.set(xticklabels=[])
+  plot.figure.savefig("{}-{}.png".format(project, 'proteins'))
+
+
 def getIDQuality( idxml_file : str ):
+  """
+  Compute the identification quality metrics for an IdXML file
+  """
   pro_ids = list()
   pep_ids = list()
 
@@ -55,70 +86,74 @@ def getIDQuality( idxml_file : str ):
   return report
 
 def create_df_metrics(props: dict, ms_run: str, step: str, sample: str):
+  """
+  Distribution per msrun
+  """
   props['step'] = step
   props['run'] = ms_run
   props['sample'] = sample
   return pd.DataFrame().append(props, ignore_index=True)
 
-project_path = "/Users/yperez/work/proteogenomics/PXD005946-Sample-19-msgf-comet-bayesian"
-project = 'PXD005946-Sample-19'
 
-consensus_ids = 'consensus_ids'
-dbs = 'dbs'
-ids = 'ids'
-logs = 'logs'
-proteomics_lfq = 'proteomics_lfq'
-raw_ids = 'raw_ids'
+@click.command()
+@click.option('--project_path', help='Project path')
+@click.option('--project', help='Project name')
+def main(project_path: str, project: str):
 
-triqler_file = 'out_triqler.tsv'
-mztab = 'out.mzTab'
+  if project_path is None or project is None:
+    print_help()
 
-consensus_pattern = '_consensus.idXML'
-consensus_fdr_pattern = '_consensus_fdr.idXML'
-filter_pattern = '_consensus_fdr_filter.idXML'
+  consensus_ids = 'consensus_ids'
+  ids = 'ids'
+  proteomics_lfq = 'proteomics_lfq'
+  raw_ids = 'raw_ids'
 
-comet_percolator_pattern = '_comet_idx_feat_perc.idXML'
-msgf_percolator_pattern = '_msgf_idx_feat_perc.idXML'
+  triqler_file = 'out_triqler.tsv'
 
-# Final results
-report_peptides_df = pd.DataFrame(
-  pd.read_csv("{}/{}/{}".format(project_path, proteomics_lfq, triqler_file), sep='\t', header=0))
-print(report_peptides_df.head(2))
+  consensus_fdr_pattern = '_consensus_fdr.idXML'
+  filter_pattern = '_consensus_fdr_filter.idXML'
 
-runs = report_peptides_df['run'].nunique()
-num_peptides = len(report_peptides_df)
-avg = num_peptides / runs
+  comet_percolator_pattern = '_comet_idx_feat_perc.idXML'
+  msgf_percolator_pattern = '_msgf_idx_feat_perc.idXML'
 
-print("Number of peptides: {}, Avg. Peptides per run: {}".format(num_peptides, avg))
-file_names = glob.glob("{}/{}/*{}".format(project_path, ids, consensus_fdr_pattern))
+  # Final results
+  report_peptides_df = pd.DataFrame(
+    pd.read_csv("{}/{}/{}".format(project_path, proteomics_lfq, triqler_file), sep='\t', header=0))
+  print(report_peptides_df.head(2))
 
-ms_runs = [ms_run_from_path(x, consensus_fdr_pattern) for x in file_names]
-print(ms_runs)
+  runs = report_peptides_df['run'].nunique()
+  num_peptides = len(report_peptides_df)
+  avg = num_peptides / runs
+
+  print("Number of peptides: {}, Avg. Peptides per run: {}".format(num_peptides, avg))
+  file_names = glob.glob("{}/{}/*{}".format(project_path, ids, consensus_fdr_pattern))
+
+  ms_runs = [ms_run_from_path(x, consensus_fdr_pattern) for x in file_names]
+  print(ms_runs)
+
+  # Get consensus filter and consensus
+  frames = []
+  for sample in ms_runs:
+
+    consensus_path = "{}/{}/{}{}".format(project_path, ids, sample, consensus_fdr_pattern)
+    if os.path.exists(consensus_path):
+      frames.append(create_df_metrics(getIDQuality(consensus_path), sample, 'consensus FDR', project))
+
+    consensus_path_filter = "{}/{}/{}{}".format(project_path, ids, sample, filter_pattern)
+    if os.path.exists(consensus_path_filter):
+      frames.append(create_df_metrics(getIDQuality(consensus_path_filter), sample, 'consensus Filter', project))
+
+    comet_path = "{}/{}/{}{}".format(project_path, raw_ids, sample, comet_percolator_pattern)
+    if os.path.exists(comet_path):
+      frames.append(create_df_metrics(getIDQuality(comet_path), sample, 'comet', project))
+
+    msgf_path = "{}/{}/{}{}".format(project_path, raw_ids, sample, msgf_percolator_pattern)
+    if os.path.exists(msgf_path):
+      frames.append(create_df_metrics(getIDQuality(msgf_path), sample, 'msgf', project))
+
+  merged_pd = pd.concat(frames)
+  generate_plots(merged_pd, project)
 
 
-# Get consensus filter and consensus
-frames = []
-for sample in ms_runs:
-
-  consensus_path = "{}/{}/{}{}".format(project_path, ids, sample, consensus_fdr_pattern)
-  if os.path.exists(consensus_path):
-    frames.append(create_df_metrics(getIDQuality(consensus_path), sample, 'consensus FDR', project))
-
-  consensus_path_filter = "{}/{}/{}{}".format(project_path, ids,sample, filter_pattern)
-  if os.path.exists(consensus_path_filter):
-    frames.append(create_df_metrics(getIDQuality(consensus_path_filter), sample, 'consensus Filter', project))
-
-  comet_path = "{}/{}/{}{}".format(project_path, raw_ids, sample, comet_percolator_pattern)
-  if os.path.exists(comet_path):
-    frames.append(create_df_metrics(getIDQuality(comet_path), sample, 'comet', project))
-
-  msgf_path = "{}/{}/{}{}".format(project_path, raw_ids, sample, msgf_percolator_pattern)
-  if os.path.exists(msgf_path):
-    frames.append(create_df_metrics(getIDQuality(msgf_path), sample, 'msgf', project))
-
-merged_pd = pd.concat(frames)
-merged_pd.plot.bar(stacked=True)
-plt.pyplot.show()
-print(merged_pd)
-merged_pd.groupby('run').psms.value_counts().unstack(0).plot.barh()
-print(merged_pd)
+if __name__ == "__main__":
+  main(sys.argv[1:])
