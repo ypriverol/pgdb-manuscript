@@ -134,3 +134,7 @@ multiomics-configs/
 #eclipse project files
 .project
 .pydevproject
+
+identified_peptides.tsv
+*.fasta
+*.fa
