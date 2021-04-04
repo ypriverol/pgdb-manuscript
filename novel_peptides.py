@@ -15,12 +15,30 @@ def print_help():
   click.echo(ctx.get_help())
   ctx.exit()
 
+def check_peptides_nextprot(peptide_list: List):
+  """
+  Check if the peptide sequence is in NextProt
+  """
+  for sequence in peptide_list:
+    r = requests.get('https://api.nextprot.org/entries/search/peptide.json?peptide={}&no-variant-match=false'.format(sequence))
+    if r.status_code == 200:
+      data = r.json()
+      if len(data) > 0:
+         peptide_list[sequence]['nextprot'] = data[0]['uniqueName']
+         peptide_list[sequence]['uniprot'] = data[0]['uniprotName']
+    print("Peptide {} - Nextprot {}".format(sequence, peptide_list[sequence]['uniprot']))
+
+  return peptide_list
 
 def check_peptides_gpmdb(peptide_list: List):
+  """
+  Check the peptides in GPMDB and get the number of observations.
+  """
   for sequence in peptide_list:
     r = requests.get('http://rest.thegpm.org/1/peptide/count/seq={}'.format(sequence))
     data = r.json()
     peptide_list[sequence]['gpmdb'] = data[0]
+    print("Peptide {} - GPMDB {}".format(sequence, data[0]))
   return peptide_list
 
 
@@ -33,6 +51,9 @@ def count_observations(data_proxi) -> int:
 
 
 def check_peptides_proxi(peptide_list: List):
+  """
+  Count the number of observations in Proxi entry points MAssIVE or PeptideAtlas
+  """
   for sequence in peptide_list:
     massive_url = 'http://massive.ucsd.edu/ProteoSAFe/proxi/v0.1/peptidoforms?resultType=compact&peptideSequence={}'.format(sequence)
     result = requests.get(massive_url)
@@ -48,6 +69,9 @@ def check_peptides_proxi(peptide_list: List):
 
 
 def clean_peptide(peptide_mod: str):
+  """
+  Clean peptide sequence to remove the PTMs
+  """
   peptide_mod = peptide_mod.replace(".", "").strip()
   return re.sub("[\(\[].*?[\)\]]", "", peptide_mod)
 
@@ -63,17 +87,17 @@ def main(peptides_file: str):
     for cnt, line in enumerate(fp):
       if len(line) > 0:
         line = clean_peptide(line)
-        peptide = {'sequence': line, 'gpmdb': 0, 'peptideatlas': 0, 'pride': 0, 'massive': 0}
+        peptide = {'sequence': line, 'gpmdb': 0, 'peptideatlas': 0, 'pride': 0, 'massive': 0, 'nextprot':'', 'uniprot':''}
         peptides[line] = peptide
 
+  peptides = check_peptides_nextprot(peptides)
   peptides = check_peptides_gpmdb(peptides)
   peptides = check_peptides_proxi(peptides)
 
   for sequence in peptides:
     peptide = peptides[sequence]
-    print("Peptide {} GPMDB ({}) PeptideAtlas ({}) MassIVE ({})"
-          .format(peptide['sequence'], peptide['gpmdb'],peptide['peptideatlas'], peptide['massive']))
-
+    print("Peptide {} GPMDB ({}) PeptideAtlas ({}) MassIVE ({}) NextProt ({}) Uniprot ({})"
+          .format(peptide['sequence'], peptide['gpmdb'],peptide['peptideatlas'], peptide['massive'], peptide['nextprot'], peptide['uniprot']))
 
 if __name__ == "__main__":
   main(sys.argv[1:])
