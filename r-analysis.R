@@ -26,7 +26,7 @@ full_intensity_data_filter$Class <- ifelse(full_intensity_data_filter$sequence %
 # Print the peptide length plot
 p <- ggplot(full_intensity_data_filter, aes(x=aa_length, color=Class)) + geom_density(alpha=.2, adjust = 2)  + xlab("Number of AAs") + ylab("Peptide Density") + theme_classic()
 p
-ggsave(file="aa-peptides.svg", plot=p, width=10, height=8)
+ggsave(file= "figures/aa-peptides.svg", plot=p, width=10, height=8)
 aggregate( aa_length ~ Class, full_intensity_data_filter, mean )
 
 # Print the percolator score distribution
@@ -36,7 +36,7 @@ p
 
 p <- ggplot(full_intensity_data_filter, aes(x=round(searchScore, digits = 4), color=Class)) + geom_density(alpha=.2, adjust = 0.1)  + facet_grid(Class ~ ., scales="free") + xlab("Percolator q-value") + ylab("Number of peptides") + xlim(0.6, 1) + theme_classic()
 p
-ggsave(file="score-peptides.svg", plot=p, width=10, height=8)
+ggsave(file= "figures/score-peptides.svg", plot=p, width=10, height=8)
 
 # Compute the log intensitiy
 intensity_data$log_intensity = log2(intensity_data$intensity)
@@ -67,7 +67,7 @@ grouped_data <- grouped_data %>% filter((Class == "variant" & Count > 30) | (Cla
 # make grouped bar plot
 p <- ggplot(grouped_data) + geom_bar(aes(x = cell_lines, y = Count, fill = Class), stat = "identity") + theme_classic() + theme(axis.text.x = element_text(angle = 90), axis.text=element_text(size=12), axis.title=element_text(size=14)) + labs(x = "Cell lines", y = "Number of peptides") +  theme(legend.position = c(0.6, 0.2)) + coord_flip()
 p
-ggsave(file="peptide-class.svg", plot=p, width=10, height=8)
+ggsave(file= "figures/peptide-class.svg", plot=p, width=10, height=8)
 
 
 
