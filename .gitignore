@@ -138,3 +138,8 @@ multiomics-configs/
 identified_peptides.tsv
 *.fasta
 *.fa
+/all_noncan_out_triqler.tsv
+/all_out_triqler.tsv
+/UniProtr11Dec2019+Ensembl103+GENCODE33+RefSeq29May2020.proteins.fasta.gz
+
+.idea/
