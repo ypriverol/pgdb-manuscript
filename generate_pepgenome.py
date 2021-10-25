@@ -1,7 +1,7 @@
 import csv
 import pandas as pd
 
-with open("all_out_triqler.tsv") as f:
+with open("all_mice_out_triqler.tsv") as f:
     reader = csv.reader(f, delimiter="\t")
     d = list(reader)
     peptides = d[1:len(d)]
