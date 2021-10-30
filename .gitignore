@@ -143,3 +143,4 @@ identified_peptides.tsv
 /UniProtr11Dec2019+Ensembl103+GENCODE33+RefSeq29May2020.proteins.fasta.gz
 
 .idea/
+/all_mice_out_triqler.tsv
