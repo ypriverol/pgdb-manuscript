@@ -22,7 +22,7 @@ Additionally, a third notebook was created to analyse a benchmark of different s
 
 The python use as input the following fasta file: `UniProtr11Dec2019+Ensembl103+GENCODE33+RefSeq29May2020.proteins.fasta.gz`
 
-This file can be found in the releases section of this repository.
+This file can be found in the releases section of this repository (https://github.com/ypriverol/pgdb-manuscript/releases/download/1.0/UniProtr11Dec2019+Ensembl103+GENCODE33+RefSeq29May2020.proteins.fasta.gz)
 
 ## R code
 
