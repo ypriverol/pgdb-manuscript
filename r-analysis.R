@@ -14,6 +14,7 @@ intensity_data_filter <- intensity_data[!duplicated(intensity_data[c("condition"
 
 #Read full intensity
 full_intensity_data = read.csv('all_out_triqler.tsv', header = TRUE, sep = "\t", row.names=NULL)
+full_intensity_data$Class[full_intensity_data$Class == "variant"] <- "mutation"
 full_intensity_data <- full_intensity_data %>% filter(Class != "contaminant")
 full_intensity_data$sequence = gsub("\\s*\\([^\\)]+\\)","",as.character(full_intensity_data$peptide))
 full_intensity_data$sequence =  gsub("\\.","",as.character(full_intensity_data$sequence))
@@ -55,8 +56,8 @@ intensity_data <- intensity_data %>% mutate(intensity_norm = normalit(log_intens
 intensity_data <- intensity_data %>% mutate(condition = ifelse(as.character(condition) == "A-549 cell", "A549", as.character(condition)))
 
 # Number of move peptides per cell line
-intensity_data_filer <- intensity_data[!duplicated(intensity_data[c("condition", "sequence")]),]
-novel_data <- intensity_data_filer %>% select(condition, Class)
+full_intensity_data_filter <- full_intensity_data_filter[!duplicated(intensity_data_filer[c("condition", "sequence")]),]
+novel_data <- full_intensity_data_filter %>% select(condition, Class)
 
 grouped_data <- aggregate(novel_data, by=list(novel_data$condition, novel_data$Class), FUN=length);
 names(grouped_data)[1] <- "cell_lines"
@@ -66,7 +67,7 @@ names(grouped_data)[2] <- "Class"
 grouped_data <- grouped_data %>% select(cell_lines, Class, Count)
 grouped_data <- grouped_data %>% filter(Class != "contaminant")
 grouped_data <- grouped_data %>% filter(Class != "canonical")
-grouped_data <- grouped_data %>% filter((Class == "variant" & Count > 5) | (Class == "non_canonical" & Count > 500))
+grouped_data <- grouped_data %>% filter((Class == "mutation" & Count > 5) | (Class == "non_canonical" & Count > 500))
 
 # make grouped bar plot
 p <- ggplot(grouped_data) + geom_bar(aes(x = cell_lines, y = Count, fill = Class), stat = "identity",position="dodge") + theme_classic() + theme(axis.text.x = element_text(angle = 90), axis.text=element_text(size=15), axis.title=element_text(size=15),legend.text=element_text(size=15)) + labs(x = "Cell lines", y = "Number of peptides") +  theme(legend.position = c(0.6, 0.6)) + coord_flip()
